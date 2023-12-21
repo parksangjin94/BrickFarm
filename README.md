@@ -172,4 +172,110 @@ window.addEventListener("beforeunload", function (event) {
 
 ### AddressBook 코드 설계
 
+	AddressBookVO
+
+```
+
+public class UserAddressBookVO {
+	private int member_address_book_no;
+	private int member_no;
+	private String address_name;
+	private String address;
+	private String zip_code;
+	private String recipient;
+	private String phone_number;
+	private String is_default;
+}
+
+```
+Controller
+---
+
+```
+
+	@PostMapping("/addaddresslist")
+	public String addaddressPost(@RequestParam("recipient") String recipient, @RequestParam(value = "address_name") String addressName,
+			@RequestParam("mobile1") String mobile1, @RequestParam("mobile2") String mobile2, @RequestParam("mobile3") String mobile3,
+			@RequestParam("recipient_address") String recipientAddress, @RequestParam("recipient_zip_code") String recipientZipCode,
+			@RequestParam("recipient_detail_address") String recipient_detail_address,@RequestParam(name="is-default", required = false) boolean isDefault,
+			HttpServletRequest request, HttpSession session
+			) {
+		logger.info("마이페이지 - (POST)배송지 추가 호출");
+		int result = -1;
+		session = request.getSession();
+		UserMemberVO loginMember = (UserMemberVO)session.getAttribute("loginMemberInfo");
+		UserAddressBookVO addedAddress = new UserAddressBookVO();
+		// 멤버 no
+		addedAddress.setMember_no(loginMember.getMember_no());
+		// 배송지 이름
+		addedAddress.setAddress_name(addressName);
+		// 배송지 주소
+		addedAddress.setAddress(recipientAddress+", " + recipient_detail_address);
+		// 휴대전화 번호
+		addedAddress.setPhone_number(mobile1+"-"+mobile2+"-"+mobile3);
+		// 수신자 
+		addedAddress.setRecipient(recipient);
+		// 배송지 우편번호
+		addedAddress.setZip_code(recipientZipCode);
+		if(isDefault) {
+			addedAddress.setIs_default("Y");
+		} else {
+			addedAddress.setIs_default("N");
+		}
+		try {
+			result = myPageService.addAddressBook(addedAddress,loginMember.getMember_no());
+			if(result > 0) {
+				logger.info("주소지 등록 실패");
+			} else {
+				logger.info("주소지 등록");
+			}
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+		return "redirect:/mypage/addresslist";
+	}
+
+```
+
+ServiceImpl
+---
+
+```
+
+	@Override
+	@Transactional(rollbackFor = Exception.class)
+	public int addAddressBook(UserAddressBookVO userAdressBookVO, int memberNo) throws Exception {
+		int result = -1;
+		UserMemberVO loginMember = myPageDAO.selectMemberInfo(memberNo);
+		String loginMemberName = loginMember.getMember_name();
+		String addressName = userAdressBookVO.getAddress_name();
+
+		if (addressName.equals("")) {
+			userAdressBookVO.setAddress_name(loginMemberName + "님 배송지");
+		}
+		if (userAdressBookVO.getIs_default().equals("Y")) {
+			if (addressBookDAO.selectDefaultAddress(memberNo) >= 0) {
+				addressBookDAO.updateDefaultAddress(addressBookDAO.selectDefaultAddress(memberNo));
+				result = addressBookDAO.insertAddressBook(userAdressBookVO);
+			}
+		} else {
+			result = addressBookDAO.insertAddressBook(userAdressBookVO);
+		}
+		return result;
+	}
+
+```
+> 수신지 이름을 설정하지 않은 경우 회원의 이름 + 님 배송지 로 설정되도록 했다.
+> 기본 배송지로 설정했을 경우 기존의 기본 배송지의 기본배송지 여부 컬럼을 'N' 으로 변경 후 배송지 정보를 저장한다.
+> 기본 배송지로 설정하지 않았을 경우 그냥 저장 한다.
+
+
+### 겪었던 문제 
+1. 도로명 주소 검색 API를 사용하여 구현했으나 도로명 검색 팝업창이 뜬 후 세션이 변경되는 문제가 발생 -> 해당 API 문의 내역을 본 결과 API 에서 제공하는 팝업창을 사용할 시 해당 문제 해결 방법이 없음.<br>
+또한 해당 API는 x, y 좌표를 제공하지 않아 추가적인 승인이 필요했음. (주소를 검색할 시 해당 주소의 약도를 출력할 예정)
+
+>해결 > 세션에 영향을 주지 않는 kakao 주소검색 API로 대체. kakao 주소검색 API는 추가적인 승인 없이 x,y 좌표를 제공하기 때문에 약도 출력에도 용이함.
+
+### View
+![image](https://github.com/parksangjin94/BrickFarm/assets/89382405/d4ab9b42-0fee-4ec8-984f-917ff1935766)
 
