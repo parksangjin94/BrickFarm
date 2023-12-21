@@ -46,7 +46,9 @@
   ShoppingCartVO
 
 ```
+
 public class ShoppingCartVO {
+
 	private int member_no; 
 	private int shopping_cart_no;
 	private String product_code;
@@ -72,5 +74,27 @@ public class ShoppingCartVO {
 Controller
 ---
 ```
+
+ @GetMapping("/shoppingcart")
+	public String cart(HttpSession session, HttpServletRequest request, Model model) throws InterruptedException {
+		logger.info("마이페이지 - 장바구니 요청");
+		session = request.getSession();
+		UserMemberVO loginMember = (UserMemberVO) session.getAttribute("loginMemberInfo");
+		int memberNo = loginMember.getMember_no();
+		try {
+			// 장바구니 목록(List)
+			List<UserShoppingCartDTO> shoppingCartList = myPageService.getShoppingCartList(memberNo);
+			
+			if (shoppingCartList.size() == 0) {
+				// 장바구니가 비어있을 경우
+				return "user/mypage/shoppingcartempty";
+			} else {
+				model.addAttribute("shoppingCartList", shoppingCartList);
+			}
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+		return "user/mypage/shoppingcart";
+	}
 
 ```
