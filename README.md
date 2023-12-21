@@ -98,3 +98,9 @@ Controller
 	}
 
 ```
+### 겪었던 문제
+1) 장바구니 페이지에서 체크여부에 따라 체크된 품목의 가격 * 수량 이 상품 금액란에 출력 되게 해야 했습니다.
+> 체크된 품목의 총 가격의 합, 체크 해제 시 해당 가격은 상품 금액에서 빠져야 했다. forEach를 이용해 출력 했기 때문에 반복되어 출력된 물품을 구분해줄 무언가가 필요했다. <br>
+>
+> 해결 > <c:forEach var="shoppingCart" items="${shoppingCartList}" varStatus = "status"> 의 status.index 를 이용, 해당 태그의 id 뒤에${status.index} 를 붙여 구분하도록 했다. 
+   
