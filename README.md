@@ -9,6 +9,10 @@
 2. Backend : mybatis, sts
 3. Database : mariaDB
 
+### 사이트 맵 
+  - 사이트 맵
+![image](https://github.com/parksangjin94/BrickFarm/assets/89382405/19ef346c-7ea1-4970-900e-a3ecb7afaf5d)
+---
 #### DB 설계 
    - 개념적 ERD
      
@@ -20,8 +24,7 @@
  ![image](https://github.com/parksangjin94/BrickFarm/assets/89382405/0b41a920-7057-426e-a240-b59da79e3202)
 
 
-  - 사이트 맵
- ![image](https://github.com/parksangjin94/BrickFarm/assets/89382405/19ef346c-7ea1-4970-900e-a3ecb7afaf5d)
+
 
 ---
 
