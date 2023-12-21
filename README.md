@@ -153,3 +153,8 @@ window.addEventListener("beforeunload", function (event) {
 });
 
 ```
+
+## View
+
+![image](https://github.com/parksangjin94/BrickFarm/assets/89382405/304c9be2-4321-4a79-9e7e-d20ab30e78fe)
+
