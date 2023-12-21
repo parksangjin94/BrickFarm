@@ -1,1 +1,3 @@
-이제 여기 작성해야함
+BrickFarm_project 
+
+제작기간 : 10
