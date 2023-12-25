@@ -279,3 +279,132 @@ ServiceImpl
 ### View
 ![image](https://github.com/parksangjin94/BrickFarm/assets/89382405/d4ab9b42-0fee-4ec8-984f-917ff1935766)
 
+---
+
+### 주문 상세보기(detailed_order)
+각 주문(ordersheet)은 상세 주문(detailed_order)으로 구성되어 있다. 각 상세 주문은 취소, 교환, 반품 신청이 가능하다.<br>
+특정 주문을 상세 조회 했을 시 해당 주문에 속해있는 상세 주문이 교환, 취소, 반품 여부와 상관없이 출력 되어야 한다. 
+때문에 취소,반품 테이블과 교환 테이블의 정보 역시 조회해 주문 상세보기 view에 출력해 주어야 한다. <br><br>
+
+### UserOrderDetailVO 코드 설계
+
+	UserOrderDetailVO
+
+```
+
+public class UserOrderDetailVO {
+	// 주문번호
+	private String merchant_uid;
+	// 물품 별 상세 주문 번호
+	private int detailed_order_no;
+	// 주문 일
+	private Date order_day;
+	// 주문자 송장번호
+	private String ordersheet_post_no;
+	// 수신자
+	private String recipient;
+	// 수신지
+	private String recipient_address;
+	// 수신자 전화번호
+	private String recipient_phone;
+	// 배송 상태
+	private String delivery_state;
+	// 총 물품 가격
+	private int total_product_price;
+	// 할인 적용된 가격
+	private int total_discounted_price;
+	// 각 상품 가격
+	private int detail_price;
+	// 각 상품 이름
+	private String product_name;
+	// 각 상품 이미지
+	private String product_main_image;
+	// 각 상품 갯수
+	private int quantity;
+	// 결제 상태
+	private String payment_state;
+	// 완료 날짜
+	private Date order_detailed_complete_date;
+	// 각 상품 가격
+	private int product_price;
+	// 배송비
+	private int post_money;
+	// 카드 결제 금액
+	private int card_pay_money;
+	// 현금 결제 금액
+	private int cash_pay_money;
+	// 포인트 결제 금액
+	private int point_pay_money;
+	// 환불 금액 
+	private int pay_cancel_money;
+	// 사용된 쿠폰 이름
+	private String coupon_policy_name;
+	// 사용된 쿠폰 할인율
+	private float discount_rate;
+	// 구매자 등급 
+	private String member_grade_name;
+	// 교환 번호
+	private int exchange_no;
+	// 교환 운송장 번호
+	private String exchange_post_number; 
+	// 교환 신청 일
+	private Date exchange_application_date;
+	// 교환 신청 확인 일
+	private Date exchange_check_date;
+	// 교환 신청 진행일
+	private Date exchange_process_date;
+	// 교환 완료일
+	private Date exchange_complete_date;
+	// 교환 상태
+	private String exchange_state;
+	// 취소, 반품 사유
+	private String cancel_reason;
+	// 취소, 반품 금액
+	private int cancel_cancel_money;
+	// 취소 인지 반품인지
+	private String cancel_what;
+	// 취소 반품 상태
+	private String cancel_state;
+	// 취소 반품 신청일
+	private Date cancel_application_date;
+	// 취소 반품 신청 확인 일
+	private Date cancel_check_date;
+	// 취소 반품 완료 일
+	private Date cancel_complete_date;
+}
+
+```
+
+Controller
+---
+
+```
+
+	// 주문 상세조회
+	@GetMapping("/orderdetail")
+	public String orderdetail(HttpServletRequest request, HttpSession session, Model model) throws Exception {
+		logger.info("마이페이지 - 주문목록 상세보기 요청");
+		// 상세 조회 될 주문의 주문번호
+		String merchant_uid = request.getParameter("merchant_uid");
+		session = request.getSession();
+		UserMemberVO loginMember = (UserMemberVO) session.getAttribute("loginMemberInfo");
+		int loginMemberNo = loginMember.getMember_no();
+
+		// 상세 조회 될 주문 (주문, 취소,교환,환불) 모두 맵의 형태로 묶음.
+		Map<String, Object> orderInfoMap = myPageService.getMemberTotalOrderInfo(loginMemberNo, merchant_uid);
+		
+		// 주문 정보
+		model.addAttribute("orderInfo", orderInfoMap.get("orderInfo"));
+		// 주문 진행중인 목록
+		model.addAttribute("orderList", orderInfoMap.get("orderList"));
+		// 취소, 반품 진행중인 목록
+		model.addAttribute("orderCancelAndReturnList", orderInfoMap.get("orderCancelAndReturnList"));
+		// 교환 진행중인 목록
+		model.addAttribute("orderExchangeList", orderInfoMap.get("orderExchangeList"));
+		
+		return "user/mypage/orderdetail";
+	}
+
+```
+
+![image](https://github.com/parksangjin94/BrickFarm/assets/89382405/04551c3f-b88f-4bba-bf95-11730a44b18d)
