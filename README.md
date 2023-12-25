@@ -538,3 +538,130 @@ Controller
 ![image](https://github.com/parksangjin94/BrickFarm/assets/89382405/4c967adf-530a-4470-bfe2-f4052d28eac1)
 
 
+### 구매 확정
+
+![image](https://github.com/parksangjin94/BrickFarm/assets/89382405/e8428a04-7d50-48f7-bef8-cbc5cb4813c4)
+
+> 쿠폰, 적립금이 주문 테이블에 컬럼으로 존재하는데 
+> 상세 주문에는 존재하지 않아서 식별 불가, 결제테이블의 컬럼을 가지고 적립금을 지금해야 하는데 결제<br><br>
+> 테이블은 주문과 연결, 상세 주문건에 대해 적립금을 지급해야하는 것이 아니라 주문에 연결된 
+> 결제테이블을 기준으로 적립금을 지급해야 하는 문제 발생 <br><br>
+
+> 구매 확정시 수행될 로직<br>
+> 1. 해당 상세 주문의 상태 변경(완료) <br>
+> 2. 해당 상세 주문이 속한 주문의 이외 상세 주문들의 상태가 완료 인지 조회 <br>
+> 3-1. 이외의 상세 주문 중 완료가 아닌 상세 주문이 있을 경우 포인트 적립 X <br>
+> 3-2. 이외의 상세 주문의 상태가 모두 완료인 경우 포인트 적립 <br>
+
+Controller
+---
+
+```
+
+// 상품 구매 확정
+	@PostMapping("/order/confirmorder")
+	public ResponseEntity<String> confirmorder(@RequestParam("modalProductDetailedOrderNo") int detailedOrderNo,
+			@RequestParam("priceNumber") int priceNumber, @RequestParam("merchantUid") String merchantUid,
+			HttpSession session, HttpServletRequest request) {
+		logger.info("마이페이지 - 주문확정 요청");
+		session = request.getSession();
+		UserMemberVO loginMember = (UserMemberVO) session.getAttribute("loginMemberInfo");
+		Map<String, Object> confirmOrderInfo = new HashMap<String, Object>();
+		int loginMemberNo = loginMember.getMember_no();
+		// 상품의 상태, 회원의 포인트 처리에 필요한 데이터를 맵에 바인딩
+		confirmOrderInfo.put("loginMemberNo", loginMemberNo);
+		confirmOrderInfo.put("detailedOrderNo", detailedOrderNo);
+		confirmOrderInfo.put("priceNumber", priceNumber);
+		confirmOrderInfo.put("merchantUid", merchantUid);
+		try {
+			// 구매 확정시 수행될 로직 처리
+			int result = myPageService.modifyOrderConfirm(confirmOrderInfo);
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+		return new ResponseEntity<String>("success", HttpStatus.OK);
+	}
+
+```
+
+> 상세 주문의 상태, 포인트 적립을 위한 parameter들을 Map에 바인딩 해준 후 Service단에 넘김.
+
+
+ServiceImpl
+---
+
+```
+
+@Override
+	@Transactional(rollbackFor = Exception.class)
+	public int modifyOrderConfirm(Map<String, Object> confirmOrderInfo) throws Exception {
+		int result = -1;
+		// 주문확정 된 상품의 상태 변경
+		result = detailedOrderDAO.updateDetailedOrderPaymentStateByOrderConfirm(confirmOrderInfo);
+		if (result > 0) {
+			// 해당 주문의 상세 주문번호 조회
+			List<Integer> detailedOrderNoList = detailedOrderDAO.selectDetailedOrderNoList(confirmOrderInfo);
+			System.out.println("해당 주문의 상세 주문 번호 목록 : " + detailedOrderNoList.toString());
+			System.out.println("해당 주문의 모든 상세 주문 개수 : " + detailedOrderNoList.size());
+			
+			// 해당 주문의 구매 확정 상세주문 개수 조회
+			int completeDetailedOrderCount = detailedOrderDAO.selectCompleteDetailedOrderCount(confirmOrderInfo);
+			System.out.println("해당 주문의 확정 상태 상세 주문 개수 : " + completeDetailedOrderCount);
+			
+			// 해당 주문의 취소,반품 완료 상세 주문 개수 조회 
+			int completeCancelDetailedOrderCount = detailedOrderDAO.selectCompleteCancelDetailedOrderCount(detailedOrderNoList);
+			System.out.println("해당 주문의 취소, 반품 완료 주문 개수 : " + completeCancelDetailedOrderCount);
+			
+			// 해당 주문의 교환 완료 상세 주문 개수 조회
+			int completeExchangeDetailedOrderCount = detailedOrderDAO.selectCompleteExchangeDetailedOrderCount(detailedOrderNoList);
+			System.out.println("해당 주문의 교환 완료 주문 개수 : " + completeExchangeDetailedOrderCount);
+			
+			// 해당 주문의 상태가 완료인 모든 상세 주문의 개수
+			int totalCompleteDetailedOrderCount = completeDetailedOrderCount + completeCancelDetailedOrderCount + completeExchangeDetailedOrderCount;
+			System.out.println("완료 상태인 모든 상세 주문의 개수 : " + totalCompleteDetailedOrderCount);
+			// 해당 주문의 실 결제 금액(현금 + 카드)
+			int actualPaymentAmount = paymentDAO.selectActualPaymentAmount(confirmOrderInfo);
+			System.out.println("총 결제 금액 : " + actualPaymentAmount);
+			confirmOrderInfo.put("actualPaymentAmount", actualPaymentAmount);
+			if (actualPaymentAmount > 0) {
+				if (detailedOrderNoList.size() == totalCompleteDetailedOrderCount) {
+					// 주문한 회원의 포인트 변동 로그 작성
+					result = pointsAccuralLogDAO.insertPointsAccrualLogByOrderConfirm(confirmOrderInfo);
+					if (result > 0) {
+						// 주문한 회원의 총 보유 포인트 변경
+						result = memberDAO.updateMemberAccrualAmountByConfirmOrder(confirmOrderInfo);
+						if (result > 0) {
+							// 주문의 총 완료날짜 업데이트
+							result = orderSheetDAO.updateOrdersheetTotalCompleteDate(confirmOrderInfo);
+							if (result <= 0) {
+								System.out.println("주문의 총 완료날짜 업데이트 실패");
+							}
+						} else {
+							System.out.println("주문한 회원의 총 보유 포인트양 변경 실패 ");
+						}
+					} else {
+						System.out.println("주문한 회원의 포인트 변동 로그 작성 실패");
+					}
+				} else {
+					System.out.println("상태가 확정이 아닌 주문이 존재함");
+				}
+			} else {
+				System.out.println("전 액 포인트로 결제한 주문");
+			}
+
+		} else {
+			System.out.println("주문확정 된 상품의 상태 변경 실패");
+		}
+		return result;
+	}
+
+```
+
+> 주문 확정 요청이 들어온 상세 주문의 상태를 변경 한 후, 해당 상세 주문이 속해 있는 주문번호의 총 상세 주문 갯수를 조회 한다. <br>
+> 이 후 상태가 완료인 상세 주문 갯수, 취소 / 교환 / 반품 주문 정보 갯수를 조회해 상태가 완료인 상세 주문 총 갯수를 해당 주문 번호의 상세 주문 갯수와 비교한다. <br>
+> 해당 주문 번호의 총 상세 주문 갯수 == 완료 상태인 상세 주문의 총 갯수 라면 포인트 적립 로직을 수행한다.
+
+
+아쉬운 점
+--- 
+API적인 관점에서는 내가 원하는 방향으로 정상적으로 작동을 하나, 아쉬운 점은 DB설계가 미숙해 효율적이지 않은 테이블 구조와, 코드적인 부분에서 만족스럽지 않은 로직들이 생겨난 점이 아쉽다. 
