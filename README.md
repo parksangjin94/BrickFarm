@@ -282,6 +282,9 @@ ServiceImpl
 ---
 
 ### 주문 상세보기(detailed_order)
+
+![image](https://github.com/parksangjin94/BrickFarm/assets/89382405/04551c3f-b88f-4bba-bf95-11730a44b18d)
+
 각 주문(ordersheet)은 상세 주문(detailed_order)으로 구성되어 있다. 각 상세 주문은 취소, 교환, 반품 신청이 가능하다.<br>
 특정 주문을 상세 조회 했을 시 해당 주문에 속해있는 상세 주문이 교환, 취소, 반품 여부와 상관없이 출력 되어야 한다. 
 때문에 취소,반품 테이블과 교환 테이블의 정보 역시 조회해 주문 상세보기 view에 출력해 주어야 한다. <br><br>
@@ -407,4 +410,131 @@ Controller
 
 ```
 
-![image](https://github.com/parksangjin94/BrickFarm/assets/89382405/04551c3f-b88f-4bba-bf95-11730a44b18d)
+주문번호, 구매자 정보, 결제 정보 와 같은 포괄적인 정보는 주문 정보로 Map에 바인딩 시켜 주었고, 상세 주문 정보, 취소, 교환, 반품 주문 정보는 각 이름에 맞춰 Map에 바인딩 시켜 View에 전달해 주었다. 
+
+주문 정보 조회
+---
+
+	DetailedOrderMapper.xml
+
+```
+
+<!-- 상세 주문의 정보(취소,교환,환불 미포함) -->
+	<select id="selectOrder" resultType="com.brickfarm.dto.user.psj.UserOrderDTO">
+		SELECT 	
+		od.merchant_uid,
+		od.detailed_order_no, 
+		od.discounted_price, 
+		od.quantity, 
+		od.payment_state, 
+		od.complete_date,
+	        od.product_price,
+	        od.product_code,
+		p.product_name, 
+		p.product_main_image,
+	        pr.detailed_order_no AS review_detailed_order_no
+        FROM
+        	detailed_order od LEFT JOIN product p
+		ON od.product_code = p.product_code
+        LEFT JOIN product_review pr ON
+		od.detailed_order_no = pr.detailed_order_no
+        WHERE
+		od.merchant_uid = #{merchant_uid} AND
+		od.payment_state NOT IN('취소', '반품','교환');
+	</select>
+
+```
+
+취소, 반품 정보 조회
+---
+
+ 	CancellationReturnMapper.xml
+
+```
+
+<!-- 상세주문 정보(취소,반품) -->
+	<select id="selectCancelAndReturnOrderInfo"
+		resultType="com.brickfarm.dto.user.psj.UserCancelAndReturnOrderDTO">
+		SELECT
+		od.merchant_uid,
+		od.detailed_order_no, 
+		od.discounted_price, 
+		od.quantity, 
+		od.payment_state, 
+		od.complete_date,
+	        od.product_price,
+	        od.product_code,
+		p.product_name, 
+		p.product_main_image,
+		pay.post_money,
+		pay.point_pay_money,
+		pay.total_pay_money,
+		pay.total_discounted_price,
+	        c.reason AS cancel_reason,
+	        c.state AS cancel_state,
+	        c.application_date AS cancel_application_date,
+	        c.check_date AS cancel_check_date,
+	        c.complete_date AS cancel_complete_date,
+	        c.add_post_money AS cancel_add_post_money,
+		c.cancel_money,
+	        c.what,
+	        c.negligence
+        FROM
+	        detailed_order od
+	        INNER JOIN payment pay ON od.merchant_uid = pay.merchant_uid
+        LEFT JOIN product p
+		ON od.product_code = p.product_code
+		LEFT JOIN cancellation_return c ON
+		od.detailed_order_no = c.detailed_order_no
+        WHERE
+		od.merchant_uid = #{merchant_uid} and
+		od.payment_state IN('취소', '반품'); 
+	</select>
+
+```
+
+교환 정보 조회
+---
+
+	ExchangeMapper.xml
+
+```
+
+<!-- 상세 주문 정보(환불) -->
+	<select id="selectExchangeOrderInfo"
+		resultType="com.brickfarm.dto.user.psj.UserExchangeOrderDTO">
+		SELECT
+		od.merchant_uid,
+		od.detailed_order_no, 
+		od.discounted_price, 
+		od.quantity, 
+		od.payment_state, 
+		od.complete_date,
+	        od.product_price,
+	        od.product_code,
+		p.product_name, 
+		p.product_main_image,
+		ex.reason AS exchange_reason,
+	        ex.post_number AS exchange_post_number,
+	        ex.state AS exchange_state,
+		ex.application_date AS exchange_application_date,
+	        ex.check_date AS exchange_check_date,
+	        ex.process_date AS exchange_process_date,
+	        ex.complete_date AS exchange_complete_date
+        FROM
+        	detailed_order od LEFT JOIN product p
+		ON od.product_code = p.product_code
+		LEFT JOIN exchange ex ON
+		od.detailed_order_no = ex.detailed_order_no
+        WHERE
+		od.merchant_uid = #{merchant_uid} AND
+		od.payment_state = '교환';      
+	</select>
+
+```
+
+---
+### View
+![image](https://github.com/parksangjin94/BrickFarm/assets/89382405/4c967adf-530a-4470-bfe2-f4052d28eac1)
+
+
