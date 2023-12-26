@@ -282,8 +282,7 @@ ServiceImpl
 ---
 
 ### 주문 상세보기(detailed_order)
-
-![image](https://github.com/parksangjin94/BrickFarm/assets/89382405/04551c3f-b88f-4bba-bf95-11730a44b18d)
+![image](https://github.com/parksangjin94/BrickFarm/assets/89382405/1efa37f2-799c-4967-b99e-7cf6450bb42c)
 
 > 각 주문(ordersheet)은 상세 주문(detailed_order)으로 구성되어 있다. 각 상세 주문은 취소, 교환, 반품 신청이 가능하다.<br>
 > 특정 주문을 상세 조회 했을 시 해당 주문에 속해있는 상세 주문이 교환, 취소, 반품 여부와 상관없이 출력 되어야 한다. <br>
